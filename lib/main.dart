@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'add_transaction.dart';
 
 void main() {
   runApp(const ExpenseManagerApp());
@@ -86,7 +87,12 @@ class WelcomeScreen extends StatelessWidget {
                 height: 58,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Sau này có thể chuyển sang màn hình chính
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddTransactionScreen(),
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1976D2),
