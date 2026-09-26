@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'add_transaction.dart';
+import 'dashboard.dart';
 
 void main() {
   runApp(const ExpenseManagerApp());
@@ -90,7 +91,7 @@ class WelcomeScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AddTransactionScreen(),
+                        builder: (context) => const DashboardScreen(),
                       ),
                     );
                   },
