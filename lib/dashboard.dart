@@ -1,17 +1,60 @@
 import 'package:flutter/material.dart';
 import 'add_transaction.dart';
 
-class DashboardScreen extends StatelessWidget {
+import 'database/database_helper.dart';
+import 'models/transaction_model.dart';
+
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+
+  List<TransactionModel> transactions = [];
+
+  double totalIncome = 0;
+  double totalExpense = 0;
+  double balance = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    loadTransactions();
+  }
+
+  Future<void> loadTransactions() async {
+    final data = await DatabaseHelper.instance.getTransactions();
+
+    double income = 0;
+    double expense = 0;
+
+    for (final transaction in data) {
+      if (transaction.type == 'Thu nhập') {
+        income += transaction.amount;
+      } else if (transaction.type == 'Chi tiêu') {
+        expense += transaction.amount;
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      transactions = data;
+      totalIncome = income;
+      totalExpense = expense;
+      balance = income - expense;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FC),
 
       // =========================
       // APP BAR
-      // =========================
       appBar: AppBar(
         backgroundColor: const Color(0xFFF8F9FC),
         elevation: 0,
@@ -149,55 +192,45 @@ class DashboardScreen extends StatelessWidget {
               // DANH SÁCH GIAO DỊCH
               // =====================
 
-              transactionItem(
-                icon: Icons.restaurant,
-                iconColor: const Color(0xFFFF7A22),
-                title: 'Ăn trưa',
-                category: 'Ăn uống',
-                date: '03/09/2024',
-                amount: '-50.000 đ',
-                amountColor: const Color(0xFFFF4D5A),
-              ),
+              ...transactions.map((transaction) {
+                IconData icon = Icons.receipt_long;
+                Color iconColor = const Color(0xFF2878F0);
 
-              transactionItem(
-                icon: Icons.directions_car,
-                iconColor: const Color(0xFF2196F3),
-                title: 'Xăng xe',
-                category: 'Di chuyển',
-                date: '03/09/2024',
-                amount: '-100.000 đ',
-                amountColor: const Color(0xFFFF4D5A),
-              ),
+                if (transaction.category == 'Ăn uống') {
+                  icon = Icons.restaurant;
+                  iconColor = const Color(0xFFFF7A22);
+                } else if (transaction.category == 'Di chuyển') {
+                  icon = Icons.directions_car;
+                  iconColor = const Color(0xFF2196F3);
+                } else if (transaction.category == 'Mua sắm') {
+                  icon = Icons.shopping_cart;
+                  iconColor = const Color(0xFF9C4DFF);
+                } else if (transaction.category == 'Giáo dục') {
+                  icon = Icons.school;
+                  iconColor = const Color(0xFF009688);
+                } else if (transaction.category == 'Thu nhập') {
+                  icon = Icons.attach_money;
+                  iconColor = const Color(0xFF35A853);
+                }
 
-              transactionItem(
-                icon: Icons.attach_money,
-                iconColor: const Color(0xFF35A853),
-                title: 'Lương tháng 9',
-                category: 'Thu nhập',
-                date: '01/09/2024',
-                amount: '+8.000.000 đ',
-                amountColor: const Color(0xFF35A853),
-              ),
+                final isIncome = transaction.type == 'Thu nhập';
 
-              transactionItem(
-                icon: Icons.shopping_cart,
-                iconColor: const Color(0xFF9C4DFF),
-                title: 'Mua sắm',
-                category: 'Mua sắm',
-                date: '31/08/2024',
-                amount: '-300.000 đ',
-                amountColor: const Color(0xFFFF4D5A),
-              ),
-
-              transactionItem(
-                icon: Icons.school,
-                iconColor: const Color(0xFF009688),
-                title: 'Học phí',
-                category: 'Giáo dục',
-                date: '30/08/2024',
-                amount: '-500.000 đ',
-                amountColor: const Color(0xFFFF4D5A),
-              ),
+                return transactionItem(
+                  icon: icon,
+                  iconColor: iconColor,
+                  title: transaction.note.isEmpty
+                      ? transaction.category
+                      : transaction.note,
+                  category: transaction.category,
+                  date: transaction.date,
+                  amount:
+                  '${isIncome ? '+' : '-'}${transaction.amount.toStringAsFixed(0)} đ',
+                  amountColor:
+                  isIncome
+                      ? const Color(0xFF35A853)
+                      : const Color(0xFFFF4D5A),
+                );
+              }).toList(),
             ],
           ),
         ),
@@ -207,15 +240,19 @@ class DashboardScreen extends StatelessWidget {
       // NÚT +
       // =========================
 
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddTransactionScreen(),
-            ),
-          );
-        },
+    floatingActionButton: FloatingActionButton(
+    onPressed: () async {
+    final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+    builder: (context) => const AddTransactionScreen(),
+    ),
+    );
+
+    if (result == true) {
+    loadTransactions();
+    }
+    },
         backgroundColor: const Color(0xFF2878F0),
         elevation: 4,
         child: const Icon(
@@ -310,7 +347,7 @@ class DashboardScreen extends StatelessWidget {
               children: [
 
                 Row(
-                  children: const [
+                  children: [
                     Text(
                       'SỐ DƯ HIỆN TẠI',
                       style: TextStyle(
@@ -332,8 +369,8 @@ class DashboardScreen extends StatelessWidget {
 
                 const SizedBox(height: 7),
 
-                const Text(
-                  '5.000.000 đ',
+                Text(
+                  '${balance.toStringAsFixed(0)} đ',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 27,
@@ -442,7 +479,7 @@ class DashboardScreen extends StatelessWidget {
             crossAxisAlignment:
             CrossAxisAlignment.start,
 
-            children: const [
+            children: [
               Text(
                 'TỔNG THU NHẬP',
                 style: TextStyle(
@@ -454,7 +491,7 @@ class DashboardScreen extends StatelessWidget {
               SizedBox(height: 2),
 
               Text(
-                '8.000.000 đ',
+                '${totalIncome.toStringAsFixed(0)} đ',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -513,7 +550,7 @@ class DashboardScreen extends StatelessWidget {
             crossAxisAlignment:
             CrossAxisAlignment.start,
 
-            children: const [
+            children:  [
               Text(
                 'TỔNG CHI TIÊU',
                 style: TextStyle(
@@ -525,7 +562,7 @@ class DashboardScreen extends StatelessWidget {
               SizedBox(height: 2),
 
               Text(
-                '3.000.000 đ',
+                '${totalExpense.toStringAsFixed(0)} đ',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -602,6 +639,8 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

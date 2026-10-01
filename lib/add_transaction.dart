@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'edit_transaction.dart';
+
+import 'database/database_helper.dart';
+import 'models/transaction_model.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -295,21 +297,69 @@ class _AddTransactionScreenState
     );
   }
 
+
   // =========================
-  // NÚT LƯU
-  // =========================
+// NÚT LƯU
+// =========================
   Widget saveButton() {
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const EditTransactionScreen(),
+        onPressed: () async {
+          // Kiểm tra số tiền
+          if (amountController.text.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Vui lòng nhập số tiền'),
+              ),
+            );
+            return;
+          }
+
+          // Chuyển số tiền sang số
+          final amount = double.tryParse(
+            amountController.text
+                .replaceAll('.', '')
+                .replaceAll(',', ''),
+          );
+
+          // Kiểm tra số tiền hợp lệ
+          if (amount == null || amount <= 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Số tiền không hợp lệ'),
+              ),
+            );
+            return;
+          }
+
+          // Tạo giao dịch
+          final transaction = TransactionModel(
+            type: isExpense ? 'Chi tiêu' : 'Thu nhập',
+            category: selectedCategory,
+            amount: amount,
+            date: formatDate(selectedDate),
+            note: noteController.text.trim(),
+          );
+
+          // Lưu vào SQLite
+          await DatabaseHelper.instance.insertTransaction(
+            transaction,
+          );
+
+          // Kiểm tra context trước khi sử dụng
+          if (!context.mounted) return;
+
+          // Thông báo lưu thành công
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đã lưu giao dịch thành công'),
             ),
           );
+
+          // Quay lại màn hình trước
+          Navigator.pop(context, true);
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: blueColor,
