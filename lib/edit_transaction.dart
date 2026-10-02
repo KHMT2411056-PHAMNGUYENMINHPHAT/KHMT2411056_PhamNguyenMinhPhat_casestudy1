@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 
+import 'database/database_helper.dart';
+import 'models/transaction_model.dart';
+
 class EditTransactionScreen extends StatefulWidget {
-  const EditTransactionScreen({super.key});
+  final TransactionModel transaction;
+
+  const EditTransactionScreen({
+    super.key,
+    required this.transaction,
+  });
 
   @override
   State<EditTransactionScreen> createState() =>
@@ -17,13 +25,40 @@ class _EditTransactionScreenState
   DateTime selectedDate = DateTime(2025, 4, 12);
 
   final TextEditingController amountController =
-  TextEditingController(text: '100.000');
+  TextEditingController();
 
   final TextEditingController noteController =
-  TextEditingController(text: 'Ăn trưa');
+  TextEditingController();
 
   final Color redColor = const Color(0xFFFF5A5F);
   final Color blueColor = const Color(0xFF0D6EFD);
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Lấy dữ liệu giao dịch được truyền vào
+    isExpense = widget.transaction.type == 'Chi tiêu';
+
+    selectedCategory = widget.transaction.category;
+
+    amountController.text =
+        widget.transaction.amount.toStringAsFixed(0);
+
+    noteController.text =
+        widget.transaction.note;
+
+    // Chuyển ngày từ dd/MM/yyyy sang DateTime
+    final parts = widget.transaction.date.split('/');
+
+    if (parts.length == 3) {
+      selectedDate = DateTime(
+        int.parse(parts[2]),
+        int.parse(parts[1]),
+        int.parse(parts[0]),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -160,6 +195,7 @@ class _EditTransactionScreenState
                 ],
               ),
             ),
+
             DropdownMenuItem(
               value: 'Di chuyển',
               child: Row(
@@ -173,6 +209,7 @@ class _EditTransactionScreenState
                 ],
               ),
             ),
+
             DropdownMenuItem(
               value: 'Mua sắm',
               child: Row(
@@ -183,6 +220,20 @@ class _EditTransactionScreenState
                   ),
                   SizedBox(width: 10),
                   Text('Mua sắm'),
+                ],
+              ),
+            ),
+
+            DropdownMenuItem(
+              value: 'Giáo dục',
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.school,
+                    color: Color(0xFFFF5A5F),
+                  ),
+                  SizedBox(width: 10),
+                  Text('Giáo dục'),
                 ],
               ),
             ),
@@ -238,7 +289,9 @@ class _EditTransactionScreenState
       onTap: selectDate,
       child: Container(
         height: 55,
-        padding: const EdgeInsets.symmetric(horizontal: 15),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 15,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
@@ -302,12 +355,59 @@ class _EditTransactionScreenState
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: () {
+        onPressed: () async {
+          // Kiểm tra số tiền
+          if (amountController.text.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Vui lòng nhập số tiền'),
+              ),
+            );
+            return;
+          }
+
+          final amount = double.tryParse(
+            amountController.text
+                .replaceAll('.', '')
+                .replaceAll(',', ''),
+          );
+
+          if (amount == null || amount <= 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Số tiền không hợp lệ'),
+              ),
+            );
+            return;
+          }
+
+          // Tạo giao dịch mới với ID cũ
+          final updatedTransaction =
+          widget.transaction.copyWith(
+            type: isExpense ? 'Chi tiêu' : 'Thu nhập',
+            category: selectedCategory,
+            amount: amount,
+            date: formatDate(selectedDate),
+            note: noteController.text.trim(),
+          );
+
+          // Cập nhật SQLite
+          await DatabaseHelper.instance.updateTransaction(
+            updatedTransaction,
+          );
+
+          if (!context.mounted) return;
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Đã cập nhật giao dịch'),
+              content: Text(
+                'Đã cập nhật giao dịch thành công',
+              ),
             ),
           );
+
+          // Quay lại Dashboard
+          Navigator.pop(context, true);
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: blueColor,
