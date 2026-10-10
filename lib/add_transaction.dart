@@ -17,7 +17,7 @@ class _AddTransactionScreenState
 
   String selectedCategory = 'Ăn uống';
 
-  DateTime selectedDate = DateTime(2025, 4, 12);
+  DateTime selectedDate = DateTime.now();
 
   final TextEditingController amountController =
   TextEditingController();
